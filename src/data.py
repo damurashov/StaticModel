@@ -4,9 +4,9 @@ import csv
 
 class Generation:
 
-	PSI_JL_MAX = 3.0
-	V_J_MAX = 1.0
-	PHI_JL_MAX = 1.5  # Max channel throughput
+	PSI_JL_MAX = 3.0  # Max channel throughput
+	V_J_MAX = 1.0  # Max memory for node J
+	PHI_JL_MAX = 1.5  # Max node performance
 	N_L = 4  # Number of structural stability regions
 	N_J = 10  # Number of nodes
 	CONNECTEDNESS = .6  # Probability that there is a link b/w 2 nodes
