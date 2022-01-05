@@ -9,15 +9,16 @@ class EqMatrix:
 	With considerations to structural stability spans, the matrix is formed in the following way:
 
 	/-----------------------------------------|-----------------------------------------/
-	|x_111   ...   x_ij1   y_j1   z_j1   g_j1 |                                         |   j = 1 (details omitted here)
-	|                                         |                                         |   j = 2
-	|                 ...over j               |                                         |   ... over j
+	|x_111   ...   x_ij1   y_j1   z_j1   g_j1 |                                         |  |  j = 1 (details omitted here)
+	|                                         |                                         |  |  j = 2
+	|                 ...over j               |                                         |  v  ... over j
 	|-----------------------------------------|-----------------------------------------|
-	|     memory remainder y_j1               | x_112   ...   x_ij2   y_j2   z_j2   g_j2|   j = 1 (details omitted here)
-	|                                         |                                         |   j = 2
-	|                                         |                    ... over j           |   ... over j
+	|     memory remainder y_j1               | x_112   ...   x_ij2   y_j2   z_j2   g_j2|  |  j = 1 (details omitted here)
+	|                                         |                                         |  |  j = 2
+	|                                         |                    ... over j           |  v  ... over j
 	/-----------------------------------------|-----------------------------------------/
 	                  n=1                                         n = 2
+	              --------------------------------------------------------->
 
 	Roughly speaking, the matrix is divided into quadrants, each of which corresponds to a structural stability span. A
 	certain number of methods in this class refers to offsets, which are used to calculate a position of a requested
