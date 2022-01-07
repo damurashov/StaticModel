@@ -19,7 +19,7 @@ class Generation:
 	CONNECTEDNESS = .6  # Probability that there is a link b/w 2 nodes
 	X_JL_MAX = 2.0  # Data threshold, max constraint value. Fixed amount of data that should be processed on a given node during structural stability timespan `L`
 
-	SCHEME = ["l", "j", "i", "psi_ijl", "psi_jil", "v_j", "phi_jl", "x_jl"]
+	SCHEME = ["l", "j", "i", "psi_jil", "v_j", "phi_jl", "x_jl"]
 
 	@staticmethod
 	def _uniform(a, b):
@@ -50,10 +50,9 @@ class Generation:
 					if i == j:
 						continue
 
-					psi_ijl = Generation._is_connected() * Generation._uniform(0, Generation.PSI_JL_MAX)
 					psi_jil = Generation._is_connected() * Generation._uniform(0, Generation.PSI_JL_MAX)
 
-					yield [l + 1, j + 1, i + 1, psi_ijl, psi_jil, v_j, phi_jl, x_jl]
+					yield [l + 1, j + 1, i + 1, psi_jil, v_j, phi_jl, x_jl]
 
 	@staticmethod
 	def generate():
