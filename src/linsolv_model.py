@@ -1,8 +1,12 @@
 # This module forms an input matrix for scipy linear solver based on the data it is provided with.
 # The input data format is defined and described in `data.py`
 
-class EqMatrix:
+
+class EqMatrixA:
 	"""
+	Matrix builder for the equality constraint
+	$ x_j = F(x_ij, x_ji, y_j, z_j, g_j) $
+
 	Contains a set of useful shortcuts that interpret subject area equality-constraints pertaining to channel
 	designation task into a system of equations for scipy linear solver represented in a format Ax = b.
 
@@ -17,27 +21,15 @@ class EqMatrix:
 	|                                         |                                         |  |  j = 2
 	|                                         |                    ... over j           |  v  ... over j
 	/-----------------------------------------|-----------------------------------------/
-	                  n=1                                         n = 2
-	              --------------------------------------------------------->
+					  n=1                                         n = 2
+				  --------------------------------------------------------->
 
 	Roughly speaking, the matrix is divided into quadrants, each of which corresponds to a structural stability span. A
 	certain number of methods in this class refers to offsets, which are used to calculate a position of a requested
 	element (a channel, i.e. x_ij, an amount of memoized info y_jl, etc.).
 	"""
 
-	@staticmethod
-	def get_row_offset_step(data):
-		pass
-
-	@staticmethod
-	def get_col_offset_step(data):
-		pass
-
-	def get_n_x_ij(self):
-		""" Returns number of channels (i.e. x_ij) """
-		return self.m * (self.m - 1)  # Number of permulations for nodes i,j given that i != j, a.k.a number of channels possible, given that the node cannot have a channel leading into itself
-
-	def get_xij_offset(self, i, j):
+	def get_offset_x_ij(self, i, j):
 		"""
 		Regardless of current structural stability span, it calculates a position of x_ij in a row consisting of
 		permutations of i and j. For example, say we have 3 nodes. The sequence is, therefore, formed as follows:
@@ -51,18 +43,97 @@ class EqMatrix:
 		i -= 1
 		j -= 1
 
-		n = self.get_n_x_ij()
+		return i * self.n_x_ij + j - int(j > i)
 
-		return i * n + j - int(j > i)
+	def get_offset_quadrant(self, qrow, qcolumn) -> int and int:
+		assert qrow >= 0 and qcolumn >= 0
 
-	def __init__(self, data: callable):
-		# Ax = b
-		mat_a = [[0]]
-		mat_b = [0]
-		m = None  # Number of nodes, a.k.a max(j)
-		k = None  # Number of structural stability spans, a.k.a max(l)
+		return self.quadrant_height * qrow, self.quadrant_width * qcolumn
 
-	def set_val(row, col, val):
-		pass
+	def __init__(self, m, k):
+		"""
+		m: number of nodes
+		k: number of structual stability spans
+		"""
+		self.m = m
+		self.k = k
 
-	def set_z_jl():
+		self.n_x_ij = self.m * (self.m - 1)  # Number of channels ij excluding (a, a)
+
+		self.offset_y = self.n_x_ij
+		self.offset_z = self.n_x_ij + 1
+		self.offset_g = self.n_x_ij + 2
+
+		self.quadrant_width = self.offset_g + 1
+		self.quadrant_height = self.m
+
+		self.matrix = [[0] * self.quadrant_width * k] * k * self.quadrant_height
+
+	def set_x_ijl(self, i, j, l, val):
+		"""
+		For the equality constraint written in the form
+		`x_j = F(x_ij, x_ji, y_j, z_j, g_j)`:
+
+		x_(index_i, index_j)l = val. For x_jil, use set_x_jil
+		"""
+
+		assert i >= 1 and j >= 1 and l >= 1
+
+		off_x_ij = self.get_offset_x_ij(i, j)
+		self.set_val(j - 1, off_x_ij, val, (l-1, l-1,))
+
+	def set_x_jil(self, j, i, l, val):
+		"""
+		Complementary method to EqMatrixA.set_x_ijl
+		"""
+
+		assert i >= 1 and j >= 1 and l >= 1
+
+		off_x_ji = self.get_offset_x_ij(j, i)
+		self.set_val(j - 1, off_x_ji, val, (l-1, l-1,))
+
+	def set_y_jl(self, j, l, value):
+		"""
+		y_jl = value
+		"""
+
+		assert j >= 1 and l >= 1
+
+		self.set_val(j - 1, self.offset_y, value, (l - 1, l - 1,))
+
+	def set_y_jlm1(self, j, l, value):
+		"""
+		y_j(l-1) = value
+		"""
+
+		assert j >= 1 and l >= 2
+
+		self.set_val(j - 1, self.offset_y, value, (l - 1, l - 2,))
+
+	def set_g_jl(self, j, l, value):
+		"""
+		g_jl = value
+		"""
+
+		assert j >= 1 and l >= 1
+
+		self.set_val(j - 1, self.offset_g, value, (l - 1, l - 1,))
+
+	def set_z_jl(self, j, l, value):
+		"""
+		z_jl = value
+		"""
+
+		assert j >= 1 and l >= 1
+
+		self.set_val(j - 1, self.offset_z, value, (l - 1, l - 1,))
+
+	def set_val(self, row, col, val, quadrant:tuple = None):
+		assert row >= 0 and col >= 0 and quadrant[0] >= 0 and quadrant[1] >= 0
+
+		if quadrant is not None:
+			off_row, off_col = self.get_offset_quadrant(*quadrant)
+		else:
+			off_row, off_col = 0, 0
+
+		self.matrix[row + off_row][col + off_col] = val
