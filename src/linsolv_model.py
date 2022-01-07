@@ -137,3 +137,30 @@ class EqMatrixA:
 			off_row, off_col = 0, 0
 
 		self.matrix[row + off_row][col + off_col] = val
+
+
+class EqMatrixB:
+	"""
+	In equation Ax = b, this class is responsible for its right side. Please refer to EqMatrixA, as these two are
+	complementary.
+	"""
+
+	def __init__(self, m, k) -> None:
+		"""
+		m: number of nodes
+		k: number of structural stability spans
+		"""
+
+		self.m = m
+		self.k = k
+		self.matrix = [0] * m * k
+
+	def set_x_jl(self, j, l, val):
+		"""
+		x_jl = val
+		"""
+
+		assert l >= 1 and j >= 1
+
+		off = self.m * (l - 1)
+		self.matrix[off + (j - 1)] = val
