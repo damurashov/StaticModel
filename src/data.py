@@ -88,4 +88,3 @@ if __name__ == "__main__":
 
 	for r in Read.readf_iter("data.csv"):
 		print(r)
-
