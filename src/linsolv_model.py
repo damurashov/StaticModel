@@ -164,3 +164,35 @@ class EqMatrixB:
 
 		off = self.m * (l - 1)
 		self.matrix[off + (j - 1)] = val
+
+
+class EqMatrixBuilder:
+
+	def __init__(self, data) -> None:
+		self.data = data
+
+		js = set()  # Nodes indices
+		ls = set()  # Structural stability spans indices
+
+		for d in data:
+			js.add(d["j"])
+			ls.add(d["l"])
+
+		m = len(js)
+		k = len(ls)
+
+		self.mat_a = EqMatrixBuilder._build_a(m, k, data)
+		self.mat_b = EqMatrixBuilder._build_b(m, k, data)
+
+	@staticmethod
+	def _build_a(m, k, data):
+		mat_a = EqMatrixA(m, k)
+
+	@staticmethod
+	def _build_b(m, k, data):
+		mat_b = EqMatrixB(m, k)
+
+		for d in data:
+			mat_b.set_x_jl(d["j"], d["l"], d["x_jl"])
+
+		return mat_b
