@@ -2,32 +2,52 @@
 # The input data format is defined and described in `data.py`
 
 
-class EqMatrixA:
+class Index:
 	"""
-	Matrix builder for the equality constraint
-	$ x_j = F(x_ij, x_ji, y_j, z_j, g_j) $
-
-	Contains a set of useful shortcuts that interpret subject area equality-constraints pertaining to channel
-	designation task into a system of equations for scipy linear solver represented in a format Ax = b.
-
-	With considerations to structural stability spans, the matrix is formed in the following way:
-
-	/-----------------------------------------|-----------------------------------------/
-	|x_111   ...   x_ij1   y_j1   z_j1   g_j1 |                                         |  |  j = 1 (details omitted here)
-	|                                         |                                         |  |  j = 2
-	|                 ...over j               |                                         |  v  ... over j
-	|-----------------------------------------|-----------------------------------------|
-	|     memory remainder y_j1               | x_112   ...   x_ij2   y_j2   z_j2   g_j2|  |  j = 1 (details omitted here)
-	|                                         |                                         |  |  j = 2
-	|                                         |                    ... over j           |  v  ... over j
-	/-----------------------------------------|-----------------------------------------/
-					  n=1                                         n = 2
-				  --------------------------------------------------------->
-
-	Roughly speaking, the matrix is divided into quadrants, each of which corresponds to a structural stability span. A
-	certain number of methods in this class refers to offsets, which are used to calculate a position of a requested
-	element (a channel, i.e. x_ij, an amount of memoized info y_jl, etc.).
+	Indexes variables regarding their positions in equality and inequality matrices and bounds.
 	"""
+
+	def __init__(self, m, k) -> None:
+		"""
+		m: number of nodes
+		k: number of structual stability spans
+		"""
+		self.m = m
+		self.k = k
+
+		self.n_x_ij = self.m * (self.m - 1)  # Number of channels ij excluding (a, a)
+
+		self.x_base = 0
+		self.y_base = self.n_x_ij
+		self.z_base = self.y_base + self.m
+		self.g_base = self.z_base + self.m
+
+		self.n_variables_l = self.n_x_ij + 3 * m  # Number of vars considering each l separately (those corresponding to an index l)
+		self.n_variables_all = self.n_variables_l * k  # Number of vars considering all ls
+
+	def get_offset_var_ijl(self, var, i=None, j=None, l=None):
+		"""
+		Gets an index of a certain variable. Equivalent to the position of a variable in the equality matrix's row.
+		i, j, and l are counted from 1
+		"""
+		assert var in ['y', 'z', 'g', 'x']
+		i = i - 1 if i is not None else None
+		j = j - 1 if j is not None else None
+		l = l - 1 if l is not None else 0
+
+		# Variables form a sequence: x's ... y's... z's... g's...
+
+		var_offset_row = {
+			'x': self.get_offset_x_ij(i, j),
+			'y': self.y_base + j,
+			'z': self.z_base + j,
+			'g': self.g_base + j,
+		}
+
+		offset = var_offset_row[var]  # Not considering l
+		offset = offset + l * self.n_variables_l  # Considering l
+
+		return offset
 
 	def get_offset_x_ij(self, i, j):
 		"""
@@ -43,7 +63,35 @@ class EqMatrixA:
 		i -= 1
 		j -= 1
 
-		return i * self.n_x_ij + j - int(j > i)
+		return self.x_base + i * (self.m - 1) + j - int(j > i)
+
+
+class EqMatrixA(Index):
+	"""
+	Matrix builder for the equality constraint
+	$ x_j = F(x_ij, x_ji, y_j, z_j, g_j) $
+
+	Contains a set of useful shortcuts that interpret subject area equality-constraints pertaining to channel
+	designation task into a system of equations for scipy linear solver represented in a format Ax = b.
+
+	With considerations to structural stability spans, the matrix is formed in the following way:
+
+	|----------------------------------------------------------|-----------------------------------------|
+	|x_111 ... x_ij1 y_11 ... y_j1 z_11 ... z_j1 g_11 ... g_j1 |                                         |  |  j = 1
+	|                                                          |               zeros                     |  |  j = 2
+	|                    ...over j                             |                                         |  v  ... over j
+	|----------------------------------------------------------|-----------------------------------------|
+	|           memory remainder y_j1 and zeros                | x_112   ...   x_ij2   y_j2   z_j2   g_j2|  |  j = 1
+	|                                                          |                                         |  |  j = 2
+	|                                                          |             ... over j                  |  v  ... over j
+	|----------------------------------------------------------|-----------------------------------------|
+					  n=1                                                          n = 2
+				     --------------------------------------------------------->
+
+	Roughly speaking, the matrix is divided into quadrants, each of which corresponds to a structural stability span. A
+	certain number of methods in this class refers to offsets, which are used to calculate a position of a requested
+	element (a channel, i.e. x_ij, an amount of memoized info y_jl, etc.).
+	"""
 
 	def get_offset_quadrant(self, qrow, qcolumn) -> int and int:
 		assert qrow >= 0 and qcolumn >= 0
@@ -55,78 +103,33 @@ class EqMatrixA:
 		m: number of nodes
 		k: number of structual stability spans
 		"""
-		self.m = m
-		self.k = k
 
-		self.n_x_ij = self.m * (self.m - 1)  # Number of channels ij excluding (a, a)
-
-		self.offset_y = self.n_x_ij
-		self.offset_z = self.n_x_ij + 1
-		self.offset_g = self.n_x_ij + 2
-
-		self.quadrant_width = self.offset_g + 1
+		Index.__init__(self, m, k)
+		self.quadrant_width = self.n_variables_l
 		self.quadrant_height = self.m
 
 		self.matrix = [[0] * self.quadrant_width * k] * k * self.quadrant_height
 
-	def set_x_ijl(self, i, j, l, val):
+	def init_ones(self):
 		"""
-		For the equality constraint written in the form
-		`x_j = F(x_ij, x_ji, y_j, z_j, g_j)`:
-
-		x_(index_i, index_j)l = val. For x_jil, use set_x_jil
+		Initializes positions corresponding to x_ijl, x_jil, y_jl, y_j(l-1), z_j, and g_j with 1
 		"""
 
-		assert i >= 1 and j >= 1 and l >= 1
+		val = 1
 
-		off_x_ij = self.get_offset_x_ij(i, j)
-		self.set_val(j - 1, off_x_ij, val, (l-1, l-1,))
+		for j in range(self.m):
+			for l in range(self.k):
+				self.set_val(j, self.get_offset_var_ijl('y', j=j), val, (l, l))
+				self.set_val(j, self.get_offset_var_ijl('z', j=j), val, (l, l))
+				self.set_val(j, self.get_offset_var_ijl('g', j=j), val, (l, l))
 
-	def set_x_jil(self, j, i, l, val):
-		"""
-		Complementary method to EqMatrixA.set_x_ijl
-		"""
+				if l > 0:
+					self.set_val(j, self.get_offset_var_ijl('y', j=j), -val, (l, l-1))
 
-		assert i >= 1 and j >= 1 and l >= 1
-
-		off_x_ji = self.get_offset_x_ij(j, i)
-		self.set_val(j - 1, off_x_ji, val, (l-1, l-1,))
-
-	def set_y_jl(self, j, l, value):
-		"""
-		y_jl = value
-		"""
-
-		assert j >= 1 and l >= 1
-
-		self.set_val(j - 1, self.offset_y, value, (l - 1, l - 1,))
-
-	def set_y_jlm1(self, j, l, value):
-		"""
-		y_j(l-1) = value
-		"""
-
-		assert j >= 1 and l >= 2
-
-		self.set_val(j - 1, self.offset_y, value, (l - 1, l - 2,))
-
-	def set_g_jl(self, j, l, value):
-		"""
-		g_jl = value
-		"""
-
-		assert j >= 1 and l >= 1
-
-		self.set_val(j - 1, self.offset_g, value, (l - 1, l - 1,))
-
-	def set_z_jl(self, j, l, value):
-		"""
-		z_jl = value
-		"""
-
-		assert j >= 1 and l >= 1
-
-		self.set_val(j - 1, self.offset_z, value, (l - 1, l - 1,))
+				for i in range(self.m):
+					if i != j:
+						self.set_val(j, self.get_offset_var_ijl('x', j=j, i=i), val, (l, l,))
+						self.set_val(j, self.get_offset_var_ijl('x', j=i, i=j), val, (l, l,))
 
 	def set_val(self, row, col, val, quadrant:tuple = None):
 		assert row >= 0 and col >= 0 and quadrant[0] >= 0 and quadrant[1] >= 0
@@ -139,7 +142,7 @@ class EqMatrixA:
 		self.matrix[row + off_row][col + off_col] = val
 
 
-class EqMatrixB:
+class EqMatrixB(Index):
 	"""
 	In equation Ax = b, this class is responsible for its right side. Please refer to EqMatrixA, as these two are
 	complementary.
@@ -151,8 +154,7 @@ class EqMatrixB:
 		k: number of structural stability spans
 		"""
 
-		self.m = m
-		self.k = k
+		Index.__init__(self, m, k)
 		self.matrix = [0] * m * k
 
 	def set_x_jl(self, j, l, val):
@@ -166,7 +168,7 @@ class EqMatrixB:
 		self.matrix[off + (j - 1)] = val
 
 
-class EqMatrixBuilder:
+class Builder:
 
 	def __init__(self, data) -> None:
 		self.data = data
@@ -181,18 +183,52 @@ class EqMatrixBuilder:
 		m = len(js)
 		k = len(ls)
 
-		self.mat_a = EqMatrixBuilder._build_a(m, k, data)
-		self.mat_b = EqMatrixBuilder._build_b(m, k, data)
+		self.mat_a = Builder._build_a(m, k, data)
+		self.mat_b = Builder._build_b(m, k, data)
+		self.bounds = Builder._build_bounds(m, k, data)
+
+	@staticmethod
+	def unwrap_row(row):
+		"""
+		row: row of data
+		returns: object with fields j, i, l, phi_jl, psi_jil, v_j, x_jl
+		"""
+		ret = object()
+		ret.j, ret.i, ret.l, ret.phi_jl, ret.psi_jil, ret.v_j, ret.x_jl = row["j"], row["i"], row["l"], row["phi_jl"], row["psi_jil"], row["v_j"], row["x_jl"]
+
+		return ret
 
 	@staticmethod
 	def _build_a(m, k, data):
 		mat_a = EqMatrixA(m, k)
+		mat_a.init_ones()
+
+		return mat_a.matrix
 
 	@staticmethod
 	def _build_b(m, k, data):
 		mat_b = EqMatrixB(m, k)
 
 		for d in data:
-			mat_b.set_x_jl(d["j"], d["l"], d["x_jl"])
+			d = Builder.unwrap_row(d)
+			mat_b.set_x_jl(d.j, d.l, d.x_jl)
 
-		return mat_b
+		return mat_b.matrix
+
+	@staticmethod
+	def _set_upper_bound(bounds, pos, val):
+		bounds[pos][2] = val
+
+		return bounds
+
+	@staticmethod
+	def build_bounds(m, k, data):
+		index = Index(m, k)
+		bounds = [(0, 0,)] * index.n_variables
+
+		for d in data:
+			d = Builder.unwrap_row(d)
+			bounds = Builder._set_upper_bound(bounds, index.get_offset_x_ij(d.j, d.i), d.psi_ji)
+
+if __name__ == "__main__":
+	pass
