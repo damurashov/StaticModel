@@ -173,7 +173,7 @@ class EqMatrixB(Index):
 
 		Index.__init__(self, m, k)
 		# self.matrix = [0] * m * k
-		self.matrix = array([0] * m * k)
+		self.matrix = array([0.0] * m * k)
 
 	def set_x_jl(self, j, l, val):
 		"""
@@ -181,8 +181,7 @@ class EqMatrixB(Index):
 		"""
 		assert l >= 0 and j >= 0
 
-		off = self.m * l
-		self.matrix[off + j] = val
+		self.matrix[self.m * l + j] = val
 
 
 class Builder:
