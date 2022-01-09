@@ -14,8 +14,8 @@ class Generation:
 	PSI_JL_MAX = 3.0  # Max channel throughput
 	V_J_MAX = 1.0  # Max memory for node J
 	PHI_JL_MAX = 1.5  # Max node performance
-	N_L = 4  # Number of structural stability regions
-	N_J = 10  # Number of nodes
+	N_L = 2  # Number of structural stability regions
+	N_J = 3  # Number of nodes
 	CONNECTEDNESS = .6  # Probability that there is a link b/w 2 nodes
 	X_JL_MAX = 2.0  # Data threshold, max constraint value. Fixed amount of data that should be processed on a given node during structural stability timespan `L`
 
@@ -52,7 +52,7 @@ class Generation:
 
 					psi_jil = Generation._is_connected() * Generation._uniform(0, Generation.PSI_JL_MAX)
 
-					yield [l + 1, j + 1, i + 1, psi_jil, v_j, phi_jl, x_jl]
+					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl]
 
 	@staticmethod
 	def generate():
