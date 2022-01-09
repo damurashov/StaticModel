@@ -1,6 +1,9 @@
 # This module forms an input matrix for scipy linear solver based on the data it is provided with.
 # The input data format is defined and described in `data.py`
 
+from pandas import DataFrame
+from numpy import array, vstack
+
 
 class Index:
 	"""
@@ -28,23 +31,21 @@ class Index:
 	def get_offset_var_ijl(self, var, i=None, j=None, l=None):
 		"""
 		Gets an index of a certain variable. Equivalent to the position of a variable in the equality matrix's row.
-		i, j, and l are counted from 1
+		i, j, and l are counted from 0
 		"""
 		assert var in ['y', 'z', 'g', 'x']
-		i = i - 1 if i is not None else None
-		j = j - 1 if j is not None else None
-		l = l - 1 if l is not None else 0
+		l = 0 if l is None else l
 
 		# Variables form a sequence: x's ... y's... z's... g's...
 
 		var_offset_row = {
-			'x': self.get_offset_x_ij(i, j),
-			'y': self.y_base + j,
-			'z': self.z_base + j,
-			'g': self.g_base + j,
+			'x': lambda: self.get_offset_x_ij(i, j),
+			'y': lambda: self.y_base + j,
+			'z': lambda: self.z_base + j,
+			'g': lambda: self.g_base + j,
 		}
 
-		offset = var_offset_row[var]  # Not considering l
+		offset = var_offset_row[var]()  # Not considering l
 		offset = offset + l * self.n_variables_l  # Considering l
 
 		return offset
@@ -53,15 +54,11 @@ class Index:
 		"""
 		Regardless of current structural stability span, it calculates a position of x_ij in a row consisting of
 		permutations of i and j. For example, say we have 3 nodes. The sequence is, therefore, formed as follows:
-		x12 x13 x21 x23 x31 x32. `i` and `j` are counted from 1.
+		x12 x13 x21 x23 x31 x32. `i` and `j` are counted from 0.
 
 		Returns an offset from position 1 for a given element. For example, for x12, the offset equals 0
 		"""
-		assert i >= 1 and j >= 1
-
-		# Count from 0.
-		i -= 1
-		j -= 1
+		assert i >= 0 and j >= 0
 
 		return self.x_base + i * (self.m - 1) + j - int(j > i)
 
@@ -108,7 +105,8 @@ class EqMatrixA(Index):
 		self.quadrant_width = self.n_variables_l
 		self.quadrant_height = self.m
 
-		self.matrix = [[0] * self.quadrant_width * k] * k * self.quadrant_height
+		# self.matrix = [[0] * self.quadrant_width * k] * k * self.quadrant_height
+		self.matrix = array([[0] * self.quadrant_width * k] * k * self.quadrant_height)
 
 	def init_ones(self):
 		"""
@@ -139,7 +137,26 @@ class EqMatrixA(Index):
 		else:
 			off_row, off_col = 0, 0
 
-		self.matrix[row + off_row][col + off_col] = val
+		row = row + off_row
+		col = col + off_col
+		self.matrix[row][col] = val
+
+	def __str__(self):
+		header = [''] * self.n_variables_all
+
+		for j in range(self.m):
+			for l in range(self.k):
+				for var in ['y', 'z', 'g']:
+					offset = self.get_offset_var_ijl(var, j=j, l=l)
+					header[offset] = f"{var}{j},{l}"
+
+				for i in range(self.m):
+					if j != i:
+						header[self.get_offset_var_ijl('x', j=j, i=i, l=l)] = f"x{i},{j},{l}"
+
+		m = vstack((header, self.matrix,))
+
+		return str(DataFrame(m))
 
 
 class EqMatrixB(Index):
@@ -155,23 +172,23 @@ class EqMatrixB(Index):
 		"""
 
 		Index.__init__(self, m, k)
-		self.matrix = [0] * m * k
+		# self.matrix = [0] * m * k
+		self.matrix = array([0] * m * k)
 
 	def set_x_jl(self, j, l, val):
 		"""
 		x_jl = val
 		"""
+		assert l >= 0 and j >= 0
 
-		assert l >= 1 and j >= 1
-
-		off = self.m * (l - 1)
-		self.matrix[off + (j - 1)] = val
+		off = self.m * l
+		self.matrix[off + j] = val
 
 
 class Builder:
 
 	def __init__(self, data) -> None:
-		self.data = data
+		data = [d for d in data]
 
 		js = set()  # Nodes indices
 		ls = set()  # Structural stability spans indices
@@ -183,9 +200,9 @@ class Builder:
 		m = len(js)
 		k = len(ls)
 
-		self.mat_a = Builder._build_a(m, k, data)
-		self.mat_b = Builder._build_b(m, k, data)
-		self.bounds = Builder._build_bounds(m, k, data)
+		self.mat_a = Builder.build_a(m, k, data)
+		self.mat_b = Builder.build_b(m, k, data)
+		self.bounds = Builder.build_bounds(m, k, data)
 
 	@staticmethod
 	def unwrap_row(row):
@@ -193,42 +210,64 @@ class Builder:
 		row: row of data
 		returns: object with fields j, i, l, phi_jl, psi_jil, v_j, x_jl
 		"""
-		ret = object()
-		ret.j, ret.i, ret.l, ret.phi_jl, ret.psi_jil, ret.v_j, ret.x_jl = row["j"], row["i"], row["l"], row["phi_jl"], row["psi_jil"], row["v_j"], row["x_jl"]
+		class Obj(object):
+			pass
+
+		def autonum(s: str):
+			try:
+				return int(s)
+			except:
+				return float(s)
+
+		ret = Obj()
+
+		for k in row.keys():
+			setattr(ret, k, autonum(row[k]))
 
 		return ret
 
 	@staticmethod
-	def _build_a(m, k, data):
+	def build_a(m, k, data):
 		mat_a = EqMatrixA(m, k)
 		mat_a.init_ones()
 
-		return mat_a.matrix
+		return mat_a
 
 	@staticmethod
-	def _build_b(m, k, data):
+	def build_b(m, k, data):
 		mat_b = EqMatrixB(m, k)
 
 		for d in data:
 			d = Builder.unwrap_row(d)
 			mat_b.set_x_jl(d.j, d.l, d.x_jl)
 
-		return mat_b.matrix
+		return mat_b
 
 	@staticmethod
 	def _set_upper_bound(bounds, pos, val):
-		bounds[pos][2] = val
+		bounds[pos][1] = val
 
 		return bounds
 
 	@staticmethod
 	def build_bounds(m, k, data):
 		index = Index(m, k)
-		bounds = [(0, 0,)] * index.n_variables
+		bounds = array([[0, 0]] * index.n_variables_all)
 
 		for d in data:
 			d = Builder.unwrap_row(d)
-			bounds = Builder._set_upper_bound(bounds, index.get_offset_x_ij(d.j, d.i), d.psi_ji)
+			bounds = Builder._set_upper_bound(bounds , index.get_offset_var_ijl('y', i=d.i, j=d.j, l=d.l), d.v_j)
+			bounds = Builder._set_upper_bound(bounds, index.get_offset_var_ijl('g', i=d.i, j=d.j, l=d.l), d.phi_jl)
+
+		return bounds
+
+
+class Output:
+
+	@staticmethod
+	def print_matrix(m):
+		print(DataFrame(m))
+
 
 if __name__ == "__main__":
 	pass
