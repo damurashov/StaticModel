@@ -251,7 +251,7 @@ class Builder:
 	@staticmethod
 	def build_bounds(m, k, data):
 		index = Index(m, k)
-		bounds = array([[0, 0]] * index.n_variables_all)
+		bounds = array([[0.0, 0.0]] * index.n_variables_all)
 
 		for d in data:
 			d = Builder.unwrap_row(d)
