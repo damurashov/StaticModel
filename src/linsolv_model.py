@@ -195,6 +195,8 @@ class Builder:
 		for d in data:
 			js.add(d["j"])
 			ls.add(d["l"])
+			alpha_1 = float(d["alpha_1"])
+			alpha_2 = float(d["alpha_2"])
 
 		m = len(js)
 		k = len(ls)
@@ -202,6 +204,21 @@ class Builder:
 		self.mat_a = Builder.build_a(m, k, data)
 		self.mat_b = Builder.build_b(m, k, data)
 		self.bounds = Builder.build_bounds(m, k, data)
+		self.max_equ_matrix = Builder.build_max_equ_matrix(m, k, alpha_1, alpha_2)
+
+	@staticmethod
+	def build_max_equ_matrix(m, k, alpha_1, alpha_2):
+		index = Index(m, k)
+		matrix = [0] * index.n_variables_all
+
+		# The original equation is formulated as \sum_over{g} - \sum_over{z} -> max
+		# But since scipy lin. solver accepts minimization equations, the inverted form is used
+		for j in range(m):
+			for l in range(k):
+				matrix[index.get_offset_var_ijl('g', j=j, l=l)] = -alpha_1
+				matrix[index.get_offset_var_ijl('z', j=j, l=l)] =  alpha_2
+
+		return matrix
 
 	@staticmethod
 	def unwrap_row(row):
