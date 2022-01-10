@@ -255,8 +255,9 @@ class Builder:
 
 		for d in data:
 			d = Builder.unwrap_row(d)
-			bounds = Builder._set_upper_bound(bounds , index.get_offset_var_ijl('y', i=d.i, j=d.j, l=d.l), d.v_j)
+			bounds = Builder._set_upper_bound(bounds, index.get_offset_var_ijl('y', i=d.i, j=d.j, l=d.l), d.v_j)
 			bounds = Builder._set_upper_bound(bounds, index.get_offset_var_ijl('g', i=d.i, j=d.j, l=d.l), d.phi_jl)
+			bounds = Builder._set_upper_bound(bounds, index.get_offset_var_ijl('x', i=d.j, j=d.i, l=d.l), d.psi_jil)
 
 		return bounds
 
