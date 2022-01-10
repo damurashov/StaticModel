@@ -18,4 +18,4 @@ bounds = [x1_bound, x2_bound]
 
 
 if __name__ == "__main__":
-    print(linprog(c=c, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds))
+	print(linprog(c=c, A_ub=a_ub, b_ub=b_ub, A_eq=a_eq, b_eq=b_eq, bounds=bounds))
