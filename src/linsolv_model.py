@@ -204,10 +204,10 @@ class Builder:
 		self.mat_a = Builder.build_a(m, k, data)
 		self.mat_b = Builder.build_b(m, k, data)
 		self.bounds = Builder.build_bounds(m, k, data)
-		self.max_equ_matrix = Builder.build_max_equ_matrix(m, k, alpha_1, alpha_2)
+		self.mat_max_equation = Builder.build_mat_max_equation(m, k, alpha_1, alpha_2)
 
 	@staticmethod
-	def build_max_equ_matrix(m, k, alpha_1, alpha_2):
+	def build_mat_max_equation(m, k, alpha_1, alpha_2):
 		index = Index(m, k)
 		matrix = [0] * index.n_variables_all
 

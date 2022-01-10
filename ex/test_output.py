@@ -15,4 +15,4 @@ if __name__ == "__main__":
 	print(builder.mat_a)
 	lsm.Output.print_matrix(builder.mat_b.matrix)
 	print(builder.bounds)
-	lsm.Output.print_matrix(builder.max_equ_matrix)
+	lsm.Output.print_matrix(builder.mat_max_equation)
