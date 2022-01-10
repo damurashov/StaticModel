@@ -1,2 +1,5 @@
 venv/
 *csv
+.idea/
+.vscode/
+__pycache__/
