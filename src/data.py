@@ -58,6 +58,40 @@ class Generation:
 					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
 
 	@staticmethod
+	def iter_userinput(m, k, alpha_1, alpha_2, f_gen_scheme=True):
+		"""
+		m - number of nodes
+		k - number of structural stability intervals
+		"""
+
+		def ui(*args, **kwargs):
+			args = ' '.join([str(s) for s in args]) + ' ' + str(kwargs) + ' >> '
+			while True:
+				try:
+					f = float(input(args))
+					return f
+				except:
+					pass
+
+		if f_gen_scheme:
+			yield Generation.SCHEME
+
+		for j in range(Generation.N_J):
+			v_j = ui('v', j=j)
+
+			for l in range(Generation.N_L):
+				phi_jl = ui('phi', j=j, l=l)
+				x_jl  = ui('x', j=j, l=l)
+
+				for i in range(Generation.N_J):
+					if i == j:
+						continue
+
+					psi_jil = ui('psi', j=j, l=l, i=i)
+
+					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
+
+	@staticmethod
 	def generate():
 		return list(Generation.iter_generate())
 
@@ -67,6 +101,14 @@ class Generation:
 			writer = csv.writer(f)
 
 			for row in Generation.iter_generate():
+				writer.writerow(row)
+
+	@staticmethod
+	def file_userinput(m, k, alpha_1, alpha_2, filename='data.csv'):
+		with open(filename, 'w') as f:
+			writer = csv.writer(f)
+
+			for row in Generation.iter_userinput(m, k, alpha_1, alpha_2, True):
 				writer.writerow(row)
 
 
