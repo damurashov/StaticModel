@@ -5,6 +5,8 @@
 
 from random import randint, uniform, random
 import csv
+import re
+import argparse
 
 
 class Generation:
@@ -58,36 +60,98 @@ class Generation:
 					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
 
 	@staticmethod
+	def _ui_format_key(*args):
+		var = args[0:1]
+		inp = args[1:]
+		print(var)
+		inp = [int(v) for v in inp]
+		print(inp)
+		return tuple(list(var) + inp)
+
+	@staticmethod
+	def _ui_update_uimap(uimap, *args):
+		"""
+		Forms dictionary of values according to the following format:
+		{(str(VAR), int(INDEX1), int(INDEX2), ...) : float(VALUE)}
+		"""
+		while True:
+			if args in uimap.keys():
+				return uimap
+
+			inp = input(str(args))
+			inp = inp.strip()
+			inp = re.split(r'\s+', inp)
+
+			try:
+				if inp[0] == '?':
+					print('\n'.join([
+						"?  -  help",
+						"edit VAR INDEX1 INDEX2 ...  -  rmv. entry",
+						"show  -  show all"
+					]))
+					return Generation._ui_update_uimap(uimap, *args)
+				elif inp[0] == 'show':
+					for k in uimap.keys():
+						print(f"{k}  -  {uimap[k]}")
+
+					return Generation._ui_update_uimap(uimap, *args)
+				elif inp[0] == 'edit':
+					key = Generation._ui_format_key(*inp[1:])
+
+					res = uimap.pop(key, None)
+					print(f"Removed: {res}")
+
+					while key not in uimap.keys():
+						uimap = Generation._ui_update_uimap(uimap, *key)
+				else:
+					try:
+						inp = float(inp[0])
+						uimap[args] = inp
+
+						return uimap
+					except Exception as e:
+						print(str(e))
+
+			except Exception as e:
+				print(str(e))
+
+	@staticmethod
 	def iter_userinput(m, k, alpha_1, alpha_2, f_gen_scheme=True):
 		"""
 		m - number of nodes
 		k - number of structural stability intervals
 		"""
 
-		def ui(*args, **kwargs):
-			args = ' '.join([str(s) for s in args]) + ' ' + str(kwargs) + ' >> '
-			while True:
-				try:
-					f = float(input(args))
-					return f
-				except:
-					pass
-
 		if f_gen_scheme:
 			yield Generation.SCHEME
 
+		uimap = dict()
+
 		for j in range(Generation.N_J):
-			v_j = ui('v', j=j)
+			uimap = Generation._ui_update_uimap(uimap, 'v_j', j)
 
 			for l in range(Generation.N_L):
-				phi_jl = ui('phi', j=j, l=l)
-				x_jl  = ui('x', j=j, l=l)
+				uimap = Generation._ui_update_uimap(uimap, 'phi_jl', j, l)
+				uimap  = Generation._ui_update_uimap(uimap, 'x_jl', j, l)
 
 				for i in range(Generation.N_J):
 					if i == j:
 						continue
 
-					psi_jil = ui('psi', j=j, l=l, i=i)
+					uimap = Generation._ui_update_uimap(uimap, 'psi_jil', j, i, l)
+
+		for j in range(Generation.N_J):
+			v_j = uimap.pop(('v_j', j))
+
+			for l in range(Generation.N_L):
+				phi_jl = uimap.pop(('phj_jl', j, l))
+				x_jl  = uimap.pop(('x_jl', j, l))
+
+				for i in range(Generation.N_J):
+					if i == j:
+						continue
+
+					psi_jil = uimap.pop(('psi_ijl', i, j, l))
 
 					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
 
