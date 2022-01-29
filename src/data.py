@@ -127,27 +127,27 @@ class Generation:
 
 		uimap = dict()
 
-		for j in range(Generation.N_J):
+		for j in range(m):
 			uimap = Generation._ui_update_uimap(uimap, 'v_j', j)
 
-			for l in range(Generation.N_L):
+			for l in range(k):
 				uimap = Generation._ui_update_uimap(uimap, 'phi_jl', j, l)
 				uimap  = Generation._ui_update_uimap(uimap, 'x_jl', j, l)
 
-				for i in range(Generation.N_J):
+				for i in range(m):
 					if i == j:
 						continue
 
 					uimap = Generation._ui_update_uimap(uimap, 'psi_jil', j, i, l)
 
-		for j in range(Generation.N_J):
+		for j in range(m):
 			v_j = uimap.pop(('v_j', j))
 
-			for l in range(Generation.N_L):
+			for l in range(k):
 				phi_jl = uimap.pop(('phj_jl', j, l))
 				x_jl  = uimap.pop(('x_jl', j, l))
 
-				for i in range(Generation.N_J):
+				for i in range(m):
 					if i == j:
 						continue
 
