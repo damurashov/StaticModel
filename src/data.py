@@ -9,31 +9,30 @@ import re
 import pickle
 
 
-class KvData:
+class KvData(dict):
 	"""
-	Stores key-value data pairs in format {(str(VAR), int(INDEX1), int(INDEX2), ...) : float(VALUE)}
+	Stores key-value data pairs in format {(str(VAR), int(INDEX1), int(INDEX2), ...) : numeric(VALUE)}
 	"""
-	def __init__(self, **kwargs):
-		self.__data = dict()
 
 	def save(self, filename):
-		pickle.dump(self.__data, filename)
+		with open(filename, 'wb') as f:
+			pickle.dump(self, f)
 
 	def load(self, filename):
-		self.__data = pickle.load(filename)
+		with open(filename, 'rb') as f:
+			self = pickle.load(f)
 
-	def get(self, var, *indices):
+	def get(self, var, *indices, **kwargs):
 		key = KvData._as_key(var, *indices)
 
 		if key in self.keys():
-			return self.__data[key]
+			return self[key]
 		else:
-			self._generate(var, *indices)
-			return self.__data[key]
+			self._generate(key)
+			return self.get(var, *indices)
 
 	@staticmethod
 	def _as_key(var, *indices):
-		assert len(indices) > 0
 		var = str(var)
 		indices = (int(i) for i in indices)
 		return (var, *indices,)
@@ -45,9 +44,11 @@ class KvData:
 		raise NotImplemented
 
 	def set(self, val, var, *indices):
-		val = float(val)
 		key = KvData._as_key(var, *indices)
-		self.__data[key] = val
+		self[key] = val
+
+	def contains(self, var, *indices):
+		return KvData._as_key(var, *indices) in self.keys()
 
 
 class RandomKvData(KvData):
@@ -88,7 +89,7 @@ class RandomKvData(KvData):
 			'alpha_2': lambda: 1 - self.get('alpha_2')
 		}
 		assert var in gen_map.keys()
-		assert key not in self.keys()
+		assert not self.contains(key)
 		generated = gen_map[var]()
 		self.set(generated, *key)
 
@@ -101,7 +102,7 @@ class UiKvData(KvData):
 		{(str(VAR), int(INDEX1), int(INDEX2), ...) : float(VALUE)}
 		"""
 		while True:
-			if key in self.keys():
+			if self.contains(key):
 				return
 
 			inp = input(str(key))
@@ -112,9 +113,9 @@ class UiKvData(KvData):
 			try:
 				if cmd == '?':
 					print('\n'.join([
-						"?  -  help",
-						"edit VAR INDEX1 INDEX2 ...  -  change entry",
-						"show  -  show all"
+						"?                           help",
+						"edit VAR INDEX1 INDEX2 ...  change entry",
+						"show                        show all"
 					]))
 
 				elif cmd == 'show':
@@ -131,7 +132,10 @@ class UiKvData(KvData):
 						self._generate(k)
 
 				else:
-					cmd = float(cmd)
+					try:
+						cmd = int(cmd)
+					except:
+						cmd = float(cmd)
 					self.set(cmd, *key)
 
 					return
@@ -191,7 +195,7 @@ class Generation:
 					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
 
 	@staticmethod
-	def iter_generate_kv(kv_data, f_gen_scheme = True):
+	def iter_generate_kv(kv_data: KvData, f_gen_scheme = True):
 		if f_gen_scheme:
 			yield Generation.SCHEME
 
@@ -312,6 +316,18 @@ class Generation:
 	@staticmethod
 	def generate():
 		return list(Generation.iter_generate())
+
+	@staticmethod
+	def generate_kv(kv_data, f_gen_scheme=True):
+		return list(Generation.iter_generate_kv(kv_data, f_gen_scheme))
+
+	@staticmethod
+	def file_generate_kv(filename, kv_data, f_gen_scheme=True):
+		with open(filename, 'w') as f:
+			writer = csv.writer(f)
+
+			for row in Generation.iter_generate_kv(kv_data, f_gen_scheme):
+				writer.writerow(row)
 
 	@staticmethod
 	def file_generate(filename='data.csv'):
