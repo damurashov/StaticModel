@@ -86,7 +86,7 @@ class RandomKvData(KvData):
 			'm': lambda: RandomKvData.N_J,  # Number of nodes
 			'k': lambda: RandomKvData.N_L,  # Number of structural stability intervals
 			'alpha_1': lambda: RandomKvData._uniform(0, 1.0),
-			'alpha_2': lambda: 1 - self.get('alpha_2')
+			'alpha_2': lambda: 1 - self.get('alpha_1')
 		}
 		assert var in gen_map.keys()
 		assert not self.contains(key)
