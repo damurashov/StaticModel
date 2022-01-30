@@ -16,13 +16,13 @@ class KvData(dict):
 
 	def save(self, filename):
 		with open(filename, 'wb') as f:
-			pickle.dump(self, f)
+			pickle.dump(dict(self), f)
 
 	def load(self, filename):
 		with open(filename, 'rb') as f:
-			self = pickle.load(f)
+			self.update(pickle.load(f))
 
-	def get(self, var, *indices, **kwargs):
+	def get(self, var, *indices):
 		key = KvData._as_key(var, *indices)
 
 		if key in self.keys():
@@ -105,8 +105,8 @@ class UiKvData(KvData):
 			if self.contains(key):
 				return
 
-			inp = input(str(key))
-			inp = inp.strip()
+			raw_inp = input(str(key))
+			inp = raw_inp.strip()
 			inp = re.split(r'\s+', inp)
 			cmd = inp[0] if len(inp) else ''
 
@@ -132,11 +132,8 @@ class UiKvData(KvData):
 						self._generate(k)
 
 				else:
-					try:
-						cmd = int(cmd)
-					except:
-						cmd = float(cmd)
-					self.set(cmd, *key)
+					val = float(eval(raw_inp))
+					self.set(val, *key)
 
 					return
 
@@ -156,14 +153,14 @@ class Generation:
 		alpha_1 = kv_data.get('alpha_1')
 		alpha_2 = kv_data.get('alpha_2')
 
-		for j in range(kv_data.get('m')):
+		for j in range(int(kv_data.get('m'))):
 			v_j = kv_data.get('v_j', j)
 
-			for l in range(kv_data.get('k')):
+			for l in range(int(kv_data.get('k'))):
 				phi_jl = kv_data.get('phi_jl', j, l)
 				x_jl  = kv_data.get('x_jl', j, l)
 
-				for i in range(kv_data.get('m')):
+				for i in range(int(kv_data.get('m'))):
 					if i == j:
 						continue
 
