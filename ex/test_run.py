@@ -10,7 +10,8 @@ from scipy.optimize import linprog
 FILE = 'data.csv'
 
 if __name__ == "__main__":
-	data.Generation.file_generate(FILE)
+	kv_data = data.RandomKvData()
+	data.Generation.file_generate_kv(FILE, kv_data)
 	builder = lsm.Builder(data.Read.readf_iter(FILE))
 
 	sol = linprog(
