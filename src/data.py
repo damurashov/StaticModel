@@ -6,20 +6,30 @@
 from random import Random, randint, uniform, random
 import csv
 import re
+import pickle
 
 
-class KvData(dict):
+class KvData:
 	"""
 	Stores key-value data pairs in format {(str(VAR), int(INDEX1), int(INDEX2), ...) : float(VALUE)}
 	"""
+	def __init__(self, **kwargs):
+		self.__data = dict()
+
+	def save(self, filename):
+		pickle.dump(self.__data, filename)
+
+	def load(self, filename):
+		self.__data = pickle.load(filename)
+
 	def get(self, var, *indices):
 		key = KvData._as_key(var, *indices)
 
 		if key in self.keys():
-			return self[key]
+			return self.__data[key]
 		else:
 			self._generate(var, *indices)
-			return self[key]
+			return self.__data[key]
 
 	@staticmethod
 	def _as_key(var, *indices):
@@ -37,7 +47,7 @@ class KvData(dict):
 	def set(self, val, var, *indices):
 		val = float(val)
 		key = KvData._as_key(var, *indices)
-		self[key] = val
+		self.__data[key] = val
 
 
 class RandomKvData(KvData):
@@ -74,7 +84,8 @@ class RandomKvData(KvData):
 			'psi_jil': lambda: RandomKvData._is_connected() * RandomKvData._uniform(0, RandomKvData.PSI_JL_MAX),
 			'm': lambda: RandomKvData.N_J,  # Number of nodes
 			'k': lambda: RandomKvData.N_L,  # Number of structural stability intervals
-			'alpha': lambda: .5,
+			'alpha_1': lambda: RandomKvData._uniform(0, 1.0),
+			'alpha_2': lambda: 1 - self.get('alpha_2')
 		}
 		assert var in gen_map.keys()
 		assert key not in self.keys()
@@ -181,7 +192,27 @@ class Generation:
 
 	@staticmethod
 	def iter_generate_kv(kv_data, f_gen_scheme = True):
-		pass
+		if f_gen_scheme:
+			yield Generation.SCHEME
+
+		alpha_1 = kv_data.get('alpha_1')
+		alpha_2 = kv_data.get('alpha_2')
+
+		for j in range(kv_data.get('m')):
+			v_j = kv_data.get('v_j', j)
+
+			for l in range(kv_data.get('k')):
+				phi_jl = kv_data.get('phi_jl', j, l)
+				x_jl  = kv_data.get('x_jl', j, l)
+
+				for i in range(kv_data.get('m')):
+					if i == j:
+						continue
+
+					psi_jil = kv_data.get('psi_jil', j, i, l)
+
+					yield [l, j, i, psi_jil, v_j, phi_jl, x_jl, alpha_1, alpha_2]
+
 
 	@staticmethod
 	def _ui_format_key(*args):
