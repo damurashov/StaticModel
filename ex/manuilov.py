@@ -186,6 +186,9 @@ userinput = {
 	('psi_jil', 6, 5, 2) : 0,
 }
 
+def print_var(val, *var):
+	print(f"{var} = {val}")
+
 if __name__ == "__main__":
 	FILE = 'manuilov.pickle'
 	FILE_CSV = 'manuilov.csv'
@@ -231,3 +234,17 @@ if __name__ == "__main__":
 
 	print(sol)
 	print(len(sol.x))
+
+	index = lsm.Index(m, k)
+	for v in ['y', 'g', 'z']:
+		for j in range(m):
+			for l in range(k):
+				var_offset = index.get_offset_var_ijl(v, j=j, l=l)
+				print_var(sol.x[var_offset], f'{v}_jl', j, l)
+
+				for i in range(m):
+					if i == j:
+						continue
+
+					x_jil_offset = index.get_offset_var_ijl('x', i=j, j=i, l=l)
+					print_var(sol.x[x_jil_offset], 'x_jil', j, i, l)
