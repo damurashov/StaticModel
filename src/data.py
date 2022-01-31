@@ -31,6 +31,13 @@ class KvData(dict):
 			self._generate(key)
 			return self.get(var, *indices)
 
+	def reset(self, var, *indices):
+		self.pop(KvData._as_key(var, *indices), None)
+
+	def get_reset(self, var, *indices):
+		self.reset(var, *indices)
+		return self.get(var, *indices)
+
 	@staticmethod
 	def _as_key(var, *indices):
 		var = str(var)

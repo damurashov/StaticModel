@@ -193,18 +193,23 @@ if __name__ == "__main__":
 	kv_data = data.UiKvData()
 	kv_data.load(FILE)
 
-	for j in range(int(kv_data.get('m'))):
-		for l in range(int(kv_data.get('k'))):
-			if kv_data.contains('x_jl', j, l):
-				continue
 
-			input = kv_data.get('x_jl_input', j, l)
-			output = kv_data.get('x_jl_output', j, l)
-			mem_available = kv_data.get('x_jl_memory_available', j, l)
-			mem_available_prev = kv_data.get('x_jl_memory_available', j, l-1)
+	k = int(kv_data.get('k'))
+	for l in range(k):
 
-			val = 2 * (input - output + mem_available - mem_available_prev)
-			kv_data.set(val, 'x_jl', j, l)
+		total_input = kv_data.get('total_input_l', l)
+		m = int(kv_data.get('m'))
+
+		n_processing = 0
+		for j in range(m):
+			n_processing += kv_data.get('processing_fraction_jl', j, l)
+
+		frac_processing = total_input / n_processing
+
+		for j in range(m):
+			x_jl = frac_processing * kv_data.get('processing_fraction_jl', j, l)
+			kv_data.set(x_jl, 'x_jl', j, l)
+
 			kv_data.save(FILE)
 
 	for j in range(int(kv_data.get('m'))):
