@@ -3,6 +3,8 @@
 
 from pandas import DataFrame
 from numpy import array, vstack
+from scipy.optimize import linprog
+import data
 
 
 class Index:
@@ -284,6 +286,21 @@ class Output:
 	@staticmethod
 	def print_matrix(m):
 		print(DataFrame(m))
+
+
+def wrap_solve(filename):
+	builder = Builder(data.Read.readf_iter(filename))
+
+	return linprog(
+		c = builder.mat_max_equation,
+		A_eq = builder.mat_a.matrix,
+		b_eq = builder.mat_b.matrix,
+		bounds = builder.bounds
+	)
+
+
+def wrap_solve_print(filename):
+	print(wrap_solve(filename))
 
 
 if __name__ == "__main__":
