@@ -299,14 +299,13 @@ def wrap_solve_csv(filename):
 	)
 
 
-def wrap_solve_pickle(filename):
-	kv_data = data.KvData()
+def wrap_solve_pickle_ui(filename):
+	kv_data = data.UiKvData()
 	kv_data.load(filename)
 	generated_filename = filename + '.csv'
 	data.Generation.file_generate_kv(generated_filename, kv_data, True)
 
 	return wrap_solve_csv(generated_filename)
-
 
 if __name__ == "__main__":
 	pass
