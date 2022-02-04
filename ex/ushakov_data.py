@@ -27,7 +27,7 @@ def prepare():
 
 	for j in range(m):
 		for l in range(k):
-			kv_data.set(v_matrix[j], 'v_jl', j, l)
+			kv_data.set(v_matrix[j], 'v_j', j)
 			kv_data.set(phi_matrix[j], 'phi_jl', j, l)
 			kv_data.set(x_jl_matrix[j][l], 'x_jl', j, l)
 
@@ -41,4 +41,5 @@ def prepare():
 
 
 if __name__ == "__main__":
-	lsm.wrap_solve_pickle(FILE)
+	prepare()
+	print(lsm.wrap_solve_pickle_ui(FILE))
