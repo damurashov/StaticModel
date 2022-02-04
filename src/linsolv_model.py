@@ -85,7 +85,7 @@ class EqMatrixA(Index):
 	|                                                          |             ... over j                  |  v  ... over j
 	|----------------------------------------------------------|-----------------------------------------|
 					  n=1                                                          n = 2
-				     --------------------------------------------------------->
+					 --------------------------------------------------------->
 
 	Roughly speaking, the matrix is divided into quadrants, each of which corresponds to a structural stability span. A
 	certain number of methods in this class refers to offsets, which are used to calculate a position of a requested
@@ -288,7 +288,7 @@ class Output:
 		print(DataFrame(m))
 
 
-def wrap_solve(filename):
+def wrap_solve_csv(filename):
 	builder = Builder(data.Read.readf_iter(filename))
 
 	return linprog(
@@ -299,8 +299,13 @@ def wrap_solve(filename):
 	)
 
 
-def wrap_solve_print(filename):
-	print(wrap_solve(filename))
+def wrap_solve_pickle(filename):
+	kv_data = data.KvData()
+	kv_data.load(filename)
+	generated_filename = filename + '.csv'
+	data.Generation.file_generate_kv(generated_filename, kv_data, True)
+
+	return wrap_solve_csv(generated_filename)
 
 
 if __name__ == "__main__":
