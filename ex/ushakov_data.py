@@ -8,11 +8,11 @@ import linsolv_model as lsm
 
 
 FILE = 'ushakov.pickle'
+k = 3
+m = 7
 
 
 def prepare():
-	k = 3
-	m = 7
 	kv_data = data.KvData()
 
 	kv_data.set(.8, 'alpha_1')
@@ -26,8 +26,9 @@ def prepare():
 	psi_ji_matrix = [[0, 1, 4, 3, 1, 1, 3], [0, 0, 3, 1, 1, 5, 1], [5, 3, 0, 1, 1, 5, 3], [4, 4, 5, 0, 2, 2, 4], [2, 4, 5, 1, 0, 0, 1], [2, 3, 3, 5, 5, 0, 0], [2, 2, 3, 1, 2, 2, 0]]
 
 	for j in range(m):
+		kv_data.set(v_matrix[j], 'v_j', j)
+
 		for l in range(k):
-			kv_data.set(v_matrix[j], 'v_j', j)
 			kv_data.set(phi_matrix[j], 'phi_jl', j, l)
 			kv_data.set(x_jl_matrix[j][l], 'x_jl', j, l)
 
@@ -42,4 +43,6 @@ def prepare():
 
 if __name__ == "__main__":
 	prepare()
-	print(lsm.wrap_solve_pickle_ui(FILE))
+	sol = lsm.wrap_solve_pickle_ui(FILE)
+	print(sol)
+	print(lsm.solution_hr_print(sol.x, m, k))
