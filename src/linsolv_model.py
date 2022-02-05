@@ -5,6 +5,7 @@ from pandas import DataFrame
 from numpy import array, vstack
 from scipy.optimize import linprog
 import data
+import itertools as itt
 
 
 class Index:
@@ -306,6 +307,32 @@ def wrap_solve_pickle_ui(filename):
 	data.Generation.file_generate_kv(generated_filename, kv_data, True)
 
 	return wrap_solve_csv(generated_filename)
+
+
+def _solution_pack_var(kv_data: data.KvData, solution, var, index: Index, i, j, l):
+	offset = index.get_offset_var_ijl(var, i, j, l)
+	value = solution[offset]
+
+	if var in ['y', 'z', 'g']:
+		kv_data.set(value, var + "_jl", j, l)
+	elif var in ['x']:
+		kv_data.set(value, var + "_jil", j, i, l)
+
+	return kv_data
+
+
+def solution_hr_print(solution, m, k):  # Print solution in human-readable form
+	index = Index(m, k)
+	kv_data = data.KvData()
+
+	for var in ['x', 'y', 'g', 'z']:
+		for j in range(index.m):
+			for l in range(index.k):
+				for i in range(index.m):
+					kv_data = _solution_pack_var(kv_data, solution, var, index, i, j, l)
+
+	print(kv_data)
+
 
 if __name__ == "__main__":
 	pass
