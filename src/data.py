@@ -38,6 +38,17 @@ class KvData(dict):
 		self.reset(var, *indices)
 		return self.get(var, *indices)
 
+	def __str__(self):
+		res = []
+
+		for k in self.keys():
+			v = self[k]
+			v = round(v, 2)
+			k_str = ' '.join([str(i) for i in k])
+			res.append(' = '.join([k_str, str(v)]))
+
+		return '\n'.join(res)
+
 	@staticmethod
 	def _as_key(var, *indices):
 		var = str(var)
